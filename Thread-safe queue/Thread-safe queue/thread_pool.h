@@ -1,10 +1,11 @@
 #pragma once
 #include<thread>
+#include<mutex>
 #include<vector>
 #include<queue>
 #include<functional>
-#include<mutex>
 #include<chrono>
+#include"Safe_queue .h"
 
 class thread_pool {
 public:
@@ -15,19 +16,20 @@ public:
 	}
 
 	void work() {
-		std::unique_lock<std::mutex> u_l(m);
-		if (func.empty()) {
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-		}
-		else {
-			auto task = func.front();
-			func.pop();
-			task();
+		while (true) {
+			std::unique_lock<std::mutex> ulm(m);
+			if (sq.empty()) {
+				std::this_thread::sleep_for(std::chrono::seconds(1));
+			}
+			else {
+				sq.front();
+				sq.pop();
+			}
 		}
 	}
 
 	void submit(std::function<void()> fu) {
-		func.push(fu);
+		sq.push(fu);
 	}
 
 	~thread_pool() {
@@ -38,6 +40,6 @@ public:
 
 private:
 	std::vector<std::thread> threads;
-	std::queue<std::function<void()>> func;
 	std::mutex m;
+	safe_queue sq;
 };
